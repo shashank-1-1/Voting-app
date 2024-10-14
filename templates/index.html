@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting App</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { color: #333; }
+        form { margin: 20px; }
+        label, select, button { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Vote for Your Favorite Animal</h1>
+    <form id="voteForm">
+        <label for="animal">Choose an animal:</label>
+        <select id="animal" name="animal" required>
+            <option value="">Select an animal</option>
+            <option value="cat">Cat</option>
+            <option value="dog">Dog</option>
+        </select>
+        <button type="submit">Vote</button>
+    </form>
+    <div id="message"></div>
+
+    <script>
+        document.getElementById('voteForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const animal = document.getElementById('animal').value;
+
+            fetch('http://192.168.216.27:8080/vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ animal }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('message').innerText = data.message || data.error;
+                document.getElementById('animal').value = ''; // Reset the dropdown
+            })
+            .catch(error => {
+                document.getElementById('message').innerText = 'Error: ' + error.message;
+            });
+        });
+    </script>
+</body>
+</html>
