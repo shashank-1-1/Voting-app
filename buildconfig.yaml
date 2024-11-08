@@ -1,0 +1,27 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: voting-app
+spec:
+  source:
+    type: Git
+    git:
+      uri: "https://github.com/shashank-1-1/Voting-app.git"
+    contextDir: "/"
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: python:3.8
+  triggers:
+    - type: GitHub
+      github:
+        secret: your-webhook-secret
+    - type: Generic
+      generic:
+        secret: your-webhook-secret
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'voting-app:latest'
