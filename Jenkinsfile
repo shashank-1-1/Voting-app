@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        OC_SERVER = '<OPENSHIFT_API_URL>'
+        OC_SERVER = 'oc login --token=sha256~ZQSsFlKOcEFjpYc8LHZBrCoQ1uVfuqVEzkrEypL-YZU --server=https://api.cacheocpnode.cacheocp.com:6443'
         NAMESPACE = 'voting-app'
         DEPLOYMENT_NAME = 'voting-app-deployment'
     }
