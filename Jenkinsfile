@@ -45,7 +45,7 @@ pipeline {
                         // Set the KUBECONFIG environment variable to the file path of the secret
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
-                            kubectl set image deployment/voting-app voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER} --namespace ${K8S_NAMESPACE}
+                            kubectl set image deployment/voting-app voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
                         '''
                     }
                 }
