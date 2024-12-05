@@ -87,7 +87,7 @@ pipeline {
                                # else
                                     #echo "Pod did not become ready in time."
                                     #exit 1
-                                fi
+                               # fi
                             else
                                 # Use the external service IP for testing
                                 #echo "Testing application at http://$SERVICE_IP:5000"
