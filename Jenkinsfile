@@ -90,7 +90,7 @@ pipeline {
                                # fi
                             else
                                 # Use the external service IP for testing
-                                #echo "Testing application at http://$SERVICE_IP:5000"
+                                echo "Testing application at http://$SERVICE_IP:5000"
                                 #curl --silent --fail http://$SERVICE_IP:5000 || exit 1
                             fi
                         '''
