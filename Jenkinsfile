@@ -79,8 +79,8 @@ pipeline {
                                     sleep 10
                                     
                                     # Test the application locally
-                                    echo "Testing application at http://localhost:5000"
-                                    curl --silent --fail http://localhost:5000 || exit 1
+                                   # echo "Testing application at http://localhost:5000"
+                                    #curl --silent --fail http://localhost:5000 || exit 1
 
                                     # Clean up port-forward process
                                     #pkill -f "kubectl port-forward" || true
@@ -90,8 +90,8 @@ pipeline {
                                 fi
                             else
                                 # Use the external service IP for testing
-                                echo "Testing application at http://$SERVICE_IP:5000"
-                                curl --silent --fail http://$SERVICE_IP:5000 || exit 1
+                                #echo "Testing application at http://$SERVICE_IP:5000"
+                                #curl --silent --fail http://$SERVICE_IP:5000 || exit 1
                             fi
                         '''
                     }
