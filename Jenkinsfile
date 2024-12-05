@@ -12,7 +12,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 // Checkout your Git repository containing the Dockerfile and app
-                git 'https://github.com/shashank-1-1/Voting-app.git'
+                git branch: 'main', url: 'https://github.com/shashank-1-1/Voting-app.git'
             }
         }
 
