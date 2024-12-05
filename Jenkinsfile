@@ -11,7 +11,6 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // Checkout your Git repository containing the Dockerfile and app
                 git branch: 'main', url: 'https://github.com/shashank-1-1/Voting-app.git'
             }
         }
@@ -19,7 +18,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image
                     sh 'docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .'
                 }
             }
@@ -42,55 +40,41 @@ pipeline {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                        // Set the KUBECONFIG environment variable to the file path of the secret
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
-                            kubectl set image deployment/voting-app voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            kubectl set image deployment/${K8S_DEPLOYMENT_NAME} voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER}
                         '''
                     }
                 }
             }
         }
 
-        stage('Check Kubernetes Cluster and Port Forward') {
+        stage('Test Application Accessibility') {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                        // Set the KUBECONFIG environment variable to the file path of the secret
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
 
-                            # Fetch the service IP (for LoadBalancer type service)
-                            SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                            
+                            SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
                             if [ -z "$SERVICE_IP" ]; then
-                                echo "Service IP not available, using port-forwarding instead"
-                                POD_NAME=$(kubectl get pods -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
-                                
-                                # Wait for the pod to be in Running state
-                                echo "Waiting for pod to be in Running state..."
-                                kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
-                                if [ $? -eq 0 ]; then
-                                    echo "Pod is now Running, starting port forwarding..."
-                                    kubectl port-forward pod/$POD_NAME 5000:5000 &
-                                    
-                                    # Wait for port-forward to establish
-                                    sleep 10
-                                    
-                                    # Test the application locally
-                                    echo "Testing application at http://localhost:5000"
-                                    curl --silent --fail http://localhost:5000 || exit 1
+                                NODE_PORT=$(kubectl get svc voting-app-service -o jsonpath='{.spec.ports[0].nodePort}')
+                                NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
+                                SERVICE_IP="${NODE_IP}:${NODE_PORT}"
+                            fi
 
-                                    # Clean up port-forward process
-                                    pkill -f "kubectl port-forward" || true
-                                else
-                                    echo "Pod did not become ready in time."
-                                    exit 1
-                                fi
+                            if [ -z "$SERVICE_IP" ]; then
+                                echo "Service IP not available. Attempting port-forwarding..."
+                                POD_NAME=$(kubectl get pods -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
+                                kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
+                                kubectl port-forward pod/$POD_NAME 5000:5000 &
+                                PORT_FORWARD_PID=$!
+                                sleep 10
+                                curl --silent --fail http://localhost:5000 || exit 1
+                                kill $PORT_FORWARD_PID
                             else
-                                # Use the external service IP for testing
-                                echo "Testing application at http://$SERVICE_IP:5000"
-                                curl --silent --fail http://$SERVICE_IP:5000 || exit 1
+                                echo "Testing application at http://$SERVICE_IP"
+                                curl --silent --fail http://$SERVICE_IP || exit 1
                             fi
                         '''
                     }
