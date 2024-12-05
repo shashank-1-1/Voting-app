@@ -60,36 +60,35 @@ pipeline {
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
 
-
-                            // Fetch the service IP (for LoadBalancer type service)
+                            # Fetch the service IP (for LoadBalancer type service)
                             SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
                             
                             if [ -z "$SERVICE_IP" ]; then
                                 echo "Service IP not available, using port-forwarding instead"
                                 POD_NAME=$(kubectl get pods -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
                                 
-                                // Wait for the pod to be in Running state
+                                # Wait for the pod to be in Running state
                                 echo "Waiting for pod to be in Running state..."
                                 kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
                                     kubectl port-forward pod/$POD_NAME 5000:80 &
                                     
-                                    // Wait for port-forward to establish
+                                    # Wait for port-forward to establish
                                     sleep 10
                                     
-                                    // Test the application locally
+                                    # Test the application locally
                                     echo "Testing application at http://localhost:5000"
                                     curl --silent --fail http://localhost:5000 || exit 1
 
-                                    // Clean up port-forward process
+                                    # Clean up port-forward process
                                     pkill -f "kubectl port-forward" || true
                                 else
                                     echo "Pod did not become ready in time."
                                     exit 1
                                 fi
                             else
-                                // Use the external service IP for testing
+                                # Use the external service IP for testing
                                 echo "Testing application at http://$SERVICE_IP:5000"
                                 curl --silent --fail http://$SERVICE_IP:5000 || exit 1
                             fi
