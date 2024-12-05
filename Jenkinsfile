@@ -28,11 +28,12 @@ pipeline {
         stage('Push Docker Image to Docker Hub') {
             steps {
                 script {
-                    // Login to Docker Hub and push the image
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     sh '''
                         docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
                         docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
                     '''
+                    }
                 }
             }
         }
