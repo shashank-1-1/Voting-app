@@ -29,7 +29,7 @@ def vote():
     animal = data.get('animal')
 
     # Validate the animal vote
-    if animal not in ['cat', 'dog']:
+    if animal not in ['cat', 'dog','Elephant']:
         return jsonify({'error': 'Invalid animal'}), 400
 
     # Save the vote in the database
@@ -57,5 +57,5 @@ def results():
 # Main block to run the application
 if __name__ == '__main__':
     init_db()  # Initialize the database before running the app
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=5000)
 

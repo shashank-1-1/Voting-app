@@ -2,50 +2,67 @@ pipeline {
     agent any
 
     environment {
-        OC_SERVER = 'oc login --token=sha256~ZQSsFlKOcEFjpYc8LHZBrCoQ1uVfuqVEzkrEypL-YZU --server=https://api.cacheocpnode.cacheocp.com:6443'
-        NAMESPACE = 'voting-app'
-        DEPLOYMENT_NAME = 'voting-app-deployment'
+        DOCKER_IMAGE = 'shashank325/voting-app'
+        DOCKER_REGISTRY = 'docker.io'
+        K8S_NAMESPACE = 'default'
+        K8S_DEPLOYMENT_NAME = 'voting-app'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/shashank-1-1/Voting-app.git'
+                // Checkout your Git repository containing the Dockerfile and app
+                git 'https://github.com/shashank-1-1/Voting-app.git'
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Building the Python Application..."
-                    // Place any Python build commands here, e.g., linting or tests
-                    sh 'python -m unittest discover -s tests'
+                    // Build Docker image
+                    sh 'docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .'
                 }
             }
         }
 
-        stage('Deploy to OpenShift') {
+        stage('Push Docker Image to Docker Hub') {
             steps {
                 script {
-                    echo "Deploying to OpenShift..."
-                    withCredentials([string(credentialsId: 'openshift-token', variable: 'TOKEN')]) {
-                        sh """
-                            oc login $OC_SERVER --token=$TOKEN --insecure-skip-tls-verify
-                            oc project $NAMESPACE
-                            oc new-app --name=$DEPLOYMENT_NAME https://github.com/shashank-1-1/Voting-app.git
-                        """
-                    }
+                    // Login to Docker Hub and push the image
+                    sh '''
+                        docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
 
-        stage('Verify Deployment') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    echo "Verifying the deployment..."
-                    sh "oc get pods -n $NAMESPACE"
+                    // Apply Kubernetes YAML for Deployment (or manually trigger a Helm deployment)
+                    sh '''
+                        kubectl set image deployment/${K8S_DEPLOYMENT_NAME} ${K8S_DEPLOYMENT_NAME}=${DOCKER_IMAGE}:${BUILD_NUMBER} --namespace ${K8S_NAMESPACE}
+                    '''
                 }
+            }
+        }
+
+        stage('Post-Deployment Tests') {
+            steps {
+                // Optionally, you can add tests or verification scripts
+                sh 'curl http://your-k8s-service-ip:5000'
             }
         }
     }
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Deployment failed!"
+        }
+    }
 }
+
