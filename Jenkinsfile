@@ -46,7 +46,7 @@ pipeline {
                         // Set the KUBECONFIG environment variable to the file path of the secret
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
-                            kubectl set image deployment/voting-app voting-app=shashank325/voting-app:${BUILD_NUMBER} --namespace default
+                            kubectl set image deployment/voting-app voting-app=shashank325/voting-app:${BUILD_NUMBER} --namespace ${K8S_NAMESPACE}
                         '''
                     }
                 }
@@ -54,45 +54,54 @@ pipeline {
         }
 
         stage('Check Kubernetes Pods and Port Forward') {
-    steps {
-        script {
-            // Use the Secret File with ID 'kubeconfig' and set the KUBECONFIG environment variable
-            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-                // Set the KUBECONFIG environment variable to the file path of the secret
-                sh '''
-                    export KUBECONFIG=$KUBECONFIG_FILE
-                    echo "Checking Kubernetes Cluster Info"
-                    kubectl cluster-info
+            steps {
+                script {
+                    // Use the Secret File with ID 'kubeconfig' and set the KUBECONFIG environment variable
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                        // Set the KUBECONFIG environment variable to the file path of the secret
+                        sh '''
+                            export KUBECONFIG=$KUBECONFIG_FILE
+                            echo "Checking Kubernetes Cluster Info"
+                            kubectl cluster-info
 
-                    echo "Fetching service IP for voting-app-service"
-                    SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                    
-                    if [ -z "$SERVICE_IP" ]; then
-                        echo "Service IP not available, using port-forwarding instead"
-                        POD_NAME=$(kubectl get pods --namespace ${K8S_NAMESPACE} -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
-                        
-                        # Wait for the pod to be in Running state
-                        echo "Waiting for pod to be in Running state..."
-                        kubectl wait --for=condition=ready pod/$POD_NAME --namespace ${K8S_NAMESPACE} --timeout=180s
-                        if [ $? -eq 0 ]; then
-                            echo "Pod is now Running, starting port forwarding..."
-                            kubectl port-forward pod/$POD_NAME 5000:80 --namespace ${K8S_NAMESPACE} &
-                            sleep 5  # Give port-forwarding a moment to establish
-                            curl http://localhost:5000  # Test if the app is accessible via port 5000
-                            pkill -f "kubectl port-forward" || true  # Clean up port-forwarding process
-                        else
-                            echo "Pod did not become ready in time."
-                            exit 1
-                        fi
-                    else
-                        # Use the external service IP for testing
-                        curl http://$SERVICE_IP:5000  # Assuming the service is available on port 5000
-                    fi
-                '''
+                            echo "Fetching service IP for voting-app-service"
+                            SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                            
+                            if [ -z "$SERVICE_IP" ]; then
+                                echo "Service IP not available, using port-forwarding instead"
+                                POD_NAME=$(kubectl get pods --namespace ${K8S_NAMESPACE} -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
+                                
+                                # Wait for the pod to be in Running state
+                                echo "Waiting for pod to be in Running state..."
+                                kubectl wait --for=condition=ready pod/$POD_NAME --namespace ${K8S_NAMESPACE} --timeout=180s
+                                if [ $? -eq 0 ]; then
+                                    echo "Pod is now Running, starting port forwarding..."
+                                    kubectl port-forward pod/$POD_NAME 5000:80 --namespace ${K8S_NAMESPACE} &
+
+                                    # Wait for port-forward to establish
+                                    sleep 10
+
+                                    # Check if port 5000 is accessible
+                                    echo "Testing application at http://localhost:5000"
+                                    curl --silent --fail http://localhost:5000 || exit 1
+
+                                    # Clean up port-forward process
+                                    pkill -f "kubectl port-forward" || true
+                                else
+                                    echo "Pod did not become ready in time."
+                                    exit 1
+                                fi
+                            else
+                                # Use the external service IP for testing
+                                echo "Testing application at http://$SERVICE_IP:5000"
+                                curl --silent --fail http://$SERVICE_IP:5000 || exit 1
+                            fi
+                        '''
+                    }
+                }
             }
         }
     }
-}
 
     post {
         success {
