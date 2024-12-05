@@ -72,7 +72,7 @@ pipeline {
                                 kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
-                                    kubectl port-forward pod/$POD_NAME 5000:80 &
+                                    kubectl port-forward pod/$POD_NAME 5000:5000 &
                                     
                                     # Wait for port-forward to establish
                                     sleep 10
