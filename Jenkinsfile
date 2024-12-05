@@ -56,33 +56,14 @@ pipeline {
         stage('Post-Deployment Tests') {
             steps {
                 script {
-                    // Access the Kubernetes service IP dynamically or use port-forward
+                    // Debugging step: Check if the Kubernetes cluster is reachable
                     sh '''
-                    # Fetch the Kubernetes service IP (ClusterIP or EXTERNAL-IP)
-                    SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                    
-                    if [ -z "$SERVICE_IP" ]; then
-                        # If EXTERNAL-IP is pending, fall back to using port-forward
-                        echo "EXTERNAL-IP is pending, using port-forwarding..."
-                        kubectl port-forward svc/voting-app-service 5000:80 --namespace ${K8S_NAMESPACE} &
-                        sleep 5  # Give port-forwarding a moment to establish
-                        
-                        # Ensure the app is accessible before testing
-                        until curl -s http://localhost:5000; do
-                            echo "Waiting for the app to become available..."
-                            sleep 5
-                        done
-                        echo "App is up and running!"
-                        pkill -f "kubectl port-forward" || true  # Clean up port-forwarding process
-                    else
-                        # Use the external service IP for testing
-                        echo "Using service external IP: $SERVICE_IP"
-                        until curl -s http://$SERVICE_IP:5000; do
-                            echo "Waiting for the app to become available at $SERVICE_IP..."
-                            sleep 5
-                        done
-                        echo "App is up and running!"
-                    fi
+                    echo "Checking Kubernetes Cluster Info"
+                    kubectl cluster-info
+
+                    # Try getting the service details
+                    echo "Fetching service IP for voting-app-service"
+                    kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
                     '''
                 }
             }
