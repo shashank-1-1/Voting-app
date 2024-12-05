@@ -64,6 +64,7 @@ pipeline {
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
                                     kubectl port-forward pod/$POD_NAME 5000:5000 &
+                                    disown
                                     sleep 10
                                 fi
                             else
