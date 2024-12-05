@@ -60,31 +60,20 @@ pipeline {
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
 
-                            // Get the current namespace and cluster context
-                            echo "Current Kubernetes Context:"
-                            kubectl config current-context
-
-                            // Get the list of nodes in the cluster
-                            echo "Fetching nodes in the cluster:"
-                            kubectl get nodes
-
-                            // Check if service IP exists, otherwise use port-forwarding
-                            echo "Checking Kubernetes Cluster Info"
-                            kubectl cluster-info
 
                             // Fetch the service IP (for LoadBalancer type service)
-                            SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                            SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
                             
                             if [ -z "$SERVICE_IP" ]; then
                                 echo "Service IP not available, using port-forwarding instead"
-                                POD_NAME=$(kubectl get pods --namespace ${K8S_NAMESPACE} -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
+                                POD_NAME=$(kubectl get pods -l app=voting-app -o jsonpath='{.items[0].metadata.name}')
                                 
                                 // Wait for the pod to be in Running state
                                 echo "Waiting for pod to be in Running state..."
-                                kubectl wait --for=condition=ready pod/$POD_NAME --namespace ${K8S_NAMESPACE} --timeout=180s
+                                kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
-                                    kubectl port-forward pod/$POD_NAME 5000:80 --namespace ${K8S_NAMESPACE} &
+                                    kubectl port-forward pod/$POD_NAME 5000:80 &
                                     
                                     // Wait for port-forward to establish
                                     sleep 10
