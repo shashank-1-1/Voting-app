@@ -54,28 +54,27 @@ pipeline {
 }
 
         stage('Post-Deployment Tests') {
-            steps {
-                script {
-                    // Access the Kubernetes service IP dynamically or use port-forward
-                    sh '''
-                    # Fetch the Kubernetes service IP (ClusterIP or EXTERNAL-IP)
-                    SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                    
-                    if [ -z "$SERVICE_IP" ]; then
-                        # If EXTERNAL-IP is pending, fall back to using port-forward
-                        kubectl port-forward svc/voting-app-service 5000:80 --namespace ${K8S_NAMESPACE} &
-                        sleep 5  # Give port-forwarding a moment to establish
-                        curl http://localhost:5000  # Test if the app is accessible via port 5000
-                        pkill -f "kubectl port-forward" || true  # Clean up port-forwarding process
-                    else
-                        # Use the external service IP for testing
-                        curl http://$SERVICE_IP:5000  # Assuming the service is available on port 5000
-                    fi
-                    '''
-                }
-            }
+    steps {
+        script {
+            // Access the Kubernetes service IP dynamically or use port-forward
+            sh '''
+            # Fetch the Kubernetes service IP (ClusterIP or EXTERNAL-IP)
+            SERVICE_IP=$(kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            
+            if [ -z "$SERVICE_IP" ]; then
+                # If EXTERNAL-IP is pending, fall back to using port-forward
+                kubectl port-forward svc/voting-app-service 5000:80 --namespace ${K8S_NAMESPACE} &
+                sleep 5  # Give port-forwarding a moment to establish
+                curl http://localhost:5000  # Test if the app is accessible via port 5000
+                pkill -f "kubectl port-forward" || true  # Clean up port-forwarding process
+            else
+                # Use the external service IP for testing
+                curl http://$SERVICE_IP:5000  # Assuming the service is available on port 5000
+            fi
+            '''
         }
     }
+}
 
 
     post {
