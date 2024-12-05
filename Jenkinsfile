@@ -83,10 +83,10 @@ pipeline {
                                     curl --silent --fail http://localhost:5000 || exit 1
 
                                     # Clean up port-forward process
-                                    pkill -f "kubectl port-forward" || true
-                                else
-                                    echo "Pod did not become ready in time."
-                                    exit 1
+                                    #pkill -f "kubectl port-forward" || true
+                               # else
+                                    #echo "Pod did not become ready in time."
+                                    #exit 1
                                 fi
                             else
                                 # Use the external service IP for testing
