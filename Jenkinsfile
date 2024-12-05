@@ -1,4 +1,56 @@
-stage('Check Kubernetes Cluster and Port Forward') {
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'shashank325/voting-app'
+        DOCKER_REGISTRY = 'docker.io'
+        K8S_NAMESPACE = 'default'
+        K8S_DEPLOYMENT_NAME = 'voting-app'
+        NGROK_AUTHTOKEN = credentials('ngrok-authtoken')  // Get ngrok authtoken from Jenkins credentials
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/shashank-1-1/Voting-app.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                }
+            }
+        }
+
+        stage('Push Docker Image to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh '''
+                            docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                        sh '''
+                            export KUBECONFIG=$KUBECONFIG_FILE
+                            kubectl set image deployment/${K8S_DEPLOYMENT_NAME} ${K8S_DEPLOYMENT_NAME}=${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Check Kubernetes Cluster and Port Forward') {
     steps {
         script {
             withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
@@ -28,6 +80,16 @@ stage('Check Kubernetes Cluster and Port Forward') {
                     fi
                 '''
             }
+        }
+    }
+}
+
+    post {
+        success {
+            echo "Deployment successful!"
+        }
+        failure {
+            echo "Deployment failed!"
         }
     }
 }
