@@ -39,15 +39,19 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    // Apply Kubernetes YAML for Deployment (or manually trigger a Helm deployment)
-                    sh '''
-                        kubectl set image deployment/${K8S_DEPLOYMENT_NAME} ${K8S_DEPLOYMENT_NAME}=${DOCKER_IMAGE}:${BUILD_NUMBER} --namespace ${K8S_NAMESPACE}
-                    '''
-                }
+    steps {
+        script {
+            // Use the Secret File with ID 'kubeconfig' and set the KUBECONFIG environment variable
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                // Set the KUBECONFIG environment variable to the file path of the secret
+                sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+                    kubectl set image deployment/voting-app voting-app=shashank325/voting-app:5 --namespace default
+                '''
             }
         }
+    }
+}
 
         stage('Post-Deployment Tests') {
             steps {
