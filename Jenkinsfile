@@ -46,25 +46,37 @@ pipeline {
                         // Set the KUBECONFIG environment variable to the file path of the secret
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
-                            kubectl set image deployment/voting-app voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER} --namespace ${K8S_NAMESPACE}
+                            kubectl set image deployment/voting-app voting-app=${DOCKER_IMAGE}:${BUILD_NUMBER} --namespace default
                         '''
                     }
                 }
             }
         }
 
-        stage('Post-Deployment Tests') {
+        stage('Check Pods and Port Forward') {
             steps {
                 script {
-                    // Debugging step: Check if the Kubernetes cluster is reachable
+                    // Use kubectl to check the status of the pods
                     sh '''
-                    echo "Checking Kubernetes Cluster Info"
-                    kubectl cluster-info
-
-                    # Try getting the service details
-                    echo "Fetching service IP for voting-app-service"
-                    kubectl get svc voting-app-service --namespace ${K8S_NAMESPACE} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+                        echo "Checking Kubernetes Pods..."
+                        kubectl get pods --namespace ${K8S_NAMESPACE}
                     '''
+
+                    // Get the name of the pod (assuming you only have one pod)
+                    def podName = sh(script: "kubectl get pods --namespace ${K8S_NAMESPACE} -o jsonpath='{.items[0].metadata.name}'", returnStdout: true).trim()
+
+                    // Use kubectl to port-forward the pod to access the app
+                    if (podName) {
+                        echo "Port-forwarding pod ${podName}..."
+                        sh """
+                            kubectl port-forward pod/${podName} 5000:80 --namespace ${K8S_NAMESPACE} &
+                            sleep 5  # Give port-forwarding a moment to establish
+                            curl http://localhost:5000  # Test if the app is accessible via port 5000
+                            pkill -f "kubectl port-forward" || true  # Clean up port-forwarding process
+                        """
+                    } else {
+                        error "Pod not found!"
+                    }
                 }
             }
         }
