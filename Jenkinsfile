@@ -47,11 +47,11 @@ pipeline {
                     sh '''
                         docker run --rm \
                           -v $(pwd):/usr/src \
-                          -e SONAR_HOST_URL=${SONARQUBE_URL} \
-                          -e SONAR_LOGIN=${SONARQUBE_TOKEN} \
+                          -e SONAR_HOST_URL=http://192.168.216.27:9000 \
+                          -e SONAR_LOGIN=squ_5013ace11109ef28d5ce337e4a127891a472dd80 \
                           sonarsource/sonar-scanner-cli \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                          -Dsonar.projectKey=Qwertyuiop. \
+                          -Dsonar.projectName=voting-app \
                           -Dsonar.sources=/usr/src
                     '''
                 }
