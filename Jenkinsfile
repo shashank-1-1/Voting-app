@@ -6,7 +6,7 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io'
         K8S_NAMESPACE = 'default'
         K8S_DEPLOYMENT_NAME = 'voting-app'
-        SONARQUBE_URL = 'http://192.168.216.27:9000/projects'  // Update with your SonarQube URL
+        SONARQUBE_URL = 'http://192.168.216.27:9000'  // Update with your SonarQube URL
         SONARQUBE_TOKEN = credentials('sonar-token')  // Jenkins credentials for SonarQube token
         SONAR_PROJECT_KEY = 'Qwertyuiop.'  // Update with your project key in SonarQube
         SONAR_PROJECT_NAME = 'voting-app'  // Update with your project name in SonarQube
@@ -43,17 +43,17 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // Run SonarQube analysis
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONARQUBE_TOKEN')]) {
-                        sh '''
-                            sonar-scanner \
-                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                              -Dsonar.projectName=${SONAR_PROJECT_NAME} \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=${SONARQUBE_URL} \
-                              -Dsonar.login=${SONARQUBE_TOKEN}
-                        '''
-                    }
+                    // Run SonarQube analysis inside a container
+                    sh '''
+                        docker run --rm \
+                          -v $(pwd):/usr/src \
+                          -e SONAR_HOST_URL=${SONARQUBE_URL} \
+                          -e SONAR_LOGIN=${SONARQUBE_TOKEN} \
+                          sonarsource/sonar-scanner-cli \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                          -Dsonar.sources=/usr/src
+                    '''
                 }
             }
         }
@@ -78,23 +78,22 @@ pipeline {
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
 
-                            # Ensure the ngrok authtoken is passed correctly
-                            ngrok authtoken "$NGROK_AUTHTOKEN"
-
+                            # Get the service IP (or fallback to port forwarding)
                             SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
                             if [ -z "$SERVICE_IP" ]; then
                                 echo "Service IP not available, using port-forwarding instead"
+                                
+                                # Get the pod name for port forwarding
                                 POD_NAME=$(kubectl get pods -l app=${K8S_DEPLOYMENT_NAME} -o jsonpath='{.items[0].metadata.name}')
                                 echo "Waiting for pod to be in Running state..."
                                 kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
+                                
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
                                     kubectl port-forward pod/$POD_NAME 5000:5000 &
-
-                                    # Start ngrok to tunnel to the port
-                                    ngrok http 5000 --log=stdout &  # Ngrok will tunnel the app at port 5000
-
-                                    sleep 10  # Allow time for ngrok to start
+                                    
+                                    # Sleep to give port-forwarding time to establish
+                                    sleep 10
                                 fi
                             else
                                 echo "Testing application at http://$SERVICE_IP:5000"
