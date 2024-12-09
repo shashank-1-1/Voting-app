@@ -6,7 +6,10 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io'
         K8S_NAMESPACE = 'default'
         K8S_DEPLOYMENT_NAME = 'voting-app'
-        NGROK_AUTHTOKEN = credentials('ngrok-authtoken')  // Get ngrok authtoken from Jenkins credentials
+        SONARQUBE_URL = 'http://192.168.216.27:9000/projects'  // Update with your SonarQube URL
+        SONARQUBE_TOKEN = credentials('SonarQube Token')  // Jenkins credentials for SonarQube token
+        SONAR_PROJECT_KEY = 'Qwertyuiop.'  // Update with your project key in SonarQube
+        SONAR_PROJECT_NAME = 'voting-app'  // Update with your project name in SonarQube
     }
 
     stages {
@@ -31,6 +34,24 @@ pipeline {
                         sh '''
                             docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
                             docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    // Run SonarQube analysis
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONARQUBE_TOKEN')]) {
+                        sh '''
+                            sonar-scanner \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=${SONARQUBE_URL} \
+                              -Dsonar.login=${SONARQUBE_TOKEN}
                         '''
                     }
                 }
