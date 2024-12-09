@@ -7,7 +7,7 @@ pipeline {
         K8S_NAMESPACE = 'default'
         K8S_DEPLOYMENT_NAME = 'voting-app'
         SONARQUBE_URL = 'http://192.168.216.27:9000/projects'  // Update with your SonarQube URL
-        SONARQUBE_TOKEN = credentials('SonarQube Token')  // Jenkins credentials for SonarQube token
+        SONARQUBE_TOKEN = credentials('SonarQubeToken')  // Jenkins credentials for SonarQube token
         SONAR_PROJECT_KEY = 'Qwertyuiop.'  // Update with your project key in SonarQube
         SONAR_PROJECT_NAME = 'voting-app'  // Update with your project name in SonarQube
     }
