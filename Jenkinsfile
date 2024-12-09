@@ -43,7 +43,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // Run SonarQube analysis inside a container
+                    // Run SonarQube analysis using the official Docker image for sonar-scanner
                     sh '''
                         docker run --rm \
                           -v $(pwd):/usr/src \
@@ -77,23 +77,16 @@ pipeline {
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
                         sh '''
                             export KUBECONFIG=$KUBECONFIG_FILE
-
-                            # Get the service IP (or fallback to port forwarding)
                             SERVICE_IP=$(kubectl get svc voting-app-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' || echo "")
                             if [ -z "$SERVICE_IP" ]; then
                                 echo "Service IP not available, using port-forwarding instead"
-                                
-                                # Get the pod name for port forwarding
                                 POD_NAME=$(kubectl get pods -l app=${K8S_DEPLOYMENT_NAME} -o jsonpath='{.items[0].metadata.name}')
                                 echo "Waiting for pod to be in Running state..."
                                 kubectl wait --for=condition=ready pod/$POD_NAME --timeout=180s
-                                
                                 if [ $? -eq 0 ]; then
                                     echo "Pod is now Running, starting port forwarding..."
                                     kubectl port-forward pod/$POD_NAME 5000:5000 &
-                                    
-                                    # Sleep to give port-forwarding time to establish
-                                    sleep 10
+                                    sleep 10  # Allow time for the port-forward to start
                                 fi
                             else
                                 echo "Testing application at http://$SERVICE_IP:5000"
