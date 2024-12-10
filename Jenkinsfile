@@ -7,7 +7,6 @@ pipeline {
         K8S_NAMESPACE = 'default'
         K8S_DEPLOYMENT_NAME = 'voting-app'
         SONARQUBE_URL = 'http://192.168.216.27:9000'  // Update with your SonarQube URL
-        SONARQUBE_TOKEN = credentials('sonar-token')  // Jenkins credentials for SonarQube token
         SONAR_PROJECT_KEY = 'Qwertyuiop.'  // Update with your project key in SonarQube
         SONAR_PROJECT_NAME = 'voting-app'  // Update with your project name in SonarQube
     }
@@ -43,19 +42,19 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    // Run SonarQube analysis using the official Docker image for sonar-scanner
-                    sh '''
-                        docker run --rm \
-                          -v $(pwd):/usr/src \
-                          -e SONAR_HOST_URL=${SONARQUBE_URL} \
-                          -e SONAR_LOGIN=${SONARQUBE_TOKEN} \
-                          sonarsource/sonar-scanner-cli \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName=${SONAR_PROJECT_NAME} \
-                          -Dsonar.sources=/usr/src \
-                          -Dsonar.login=${SONARQUBE_TOKEN}  # Explicitly pass the token here
-                    '''
-                    
+                    withCredentials([usernamePassword(credentialsId: 'sonar-credentials', usernameVariable: 'SONAR_USER', passwordVariable: 'SONAR_PASSWORD')]) {
+                        sh '''
+                            docker run --rm \
+                              -v $(pwd):/usr/src \
+                              -e SONAR_HOST_URL=${SONARQUBE_URL} \
+                              sonarsource/sonar-scanner-cli \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                              -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                              -Dsonar.sources=/usr/src \
+                              -Dsonar.login=admin \
+                              -Dsonar.password=Shashank@11
+                        '''
+                    }
                 }
             }
         }
