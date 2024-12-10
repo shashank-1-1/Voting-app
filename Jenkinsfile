@@ -55,6 +55,7 @@ pipeline {
                           -Dsonar.sources=/usr/src \
                           -Dsonar.login=${SONARQUBE_TOKEN}  # Explicitly pass the token here
                     '''
+                    
                 }
             }
         }
