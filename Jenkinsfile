@@ -51,8 +51,8 @@ pipeline {
                               -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                               -Dsonar.projectName=${SONAR_PROJECT_NAME} \
                               -Dsonar.sources=/usr/src \
-                              -Dsonar.login=admin \
-                              -Dsonar.password=Shashank@11
+                              -Dsonar.login=$SONAR_USER \
+                              -Dsonar.password=$SONAR_PASSWORD
                         '''
                     }
                 }
